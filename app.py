@@ -19,28 +19,23 @@ import os
 from mysql.connector import pooling, Error
 from mysql.connector import pooling
 
-mysql_pool = pooling.MySQLConnectionPool(
-    pool_name="mypool",
-    pool_size=3,
-    pool_reset_session=True,
-    host="mydb.cfc0uui6evlw.eu-north-1.rds.amazonaws.com",  # ✅ RDS endpoint
-    database="messdb2",  # ✅ your database name
-    user="root",          # ✅ your RDS username
-    password="Admin321"   # ✅ your RDS password
-)
-
-
-# --- Load DB config from environment variables ---
 dbconfig = {
-    "host": os.environ.get("MYSQL_HOST"),
-    "user": os.environ.get("MYSQL_USER"),
-    "password": os.environ.get("MYSQL_PASSWORD"),
-    "database": os.environ.get("MYSQL_DB"),
-    "port": int(os.environ.get("MYSQL_PORT", 3306))
-    
+    "host": "localhost",       # or 127.0.0.1
+    "user": "root",            # default local MySQL username
+    "password": "mysql123",            # enter your MySQL password if set
+    "database": "mess_app2",   # name of your local DB
+    "port": 3306               # default MySQL port
 }
 
 
+mysql_pool = pooling.MySQLConnectionPool(
+    pool_size=10,
+    host=dbconfig["host"],
+    user=dbconfig["user"],
+    password=dbconfig["password"],
+    database=dbconfig["database"],
+    port=dbconfig["port"]
+)
 # --- Setup MySQL connection pool ---
 
 
@@ -1416,28 +1411,43 @@ def add_mess_cut_admin():
     users = []
 
     try:
-        # ✅ Get connection from pool
         conn = mysql_pool.get_connection()
         cur = conn.cursor(dictionary=True)
 
-        # ✅ Adjust these column names to match your DB!
+        # Load users for dropdown
         cur.execute("SELECT id, name, course FROM users")
         users = cur.fetchall()
-        print("DEBUG USERS FETCHED:", users)
 
         if request.method == 'POST':
             user_id = request.form['user_id']
             start_date = request.form['start_date']
             end_date = request.form['end_date']
 
-            # validate dates
+            # Validate date
             start_obj = datetime.strptime(start_date, "%Y-%m-%d")
             end_obj = datetime.strptime(end_date, "%Y-%m-%d")
             if start_obj > end_obj:
                 flash("❌ Start date cannot be after end date!", "danger")
                 return redirect(url_for('add_mess_cut_admin'))
 
-            # ✅ Insert into mess_cut
+            # 🚫 Overlap Check
+            cur.execute(
+                """
+                SELECT * FROM mess_cut
+                WHERE user_id = %s 
+                AND (
+                    start_date <= %s AND end_date >= %s
+                )
+                """,
+                (user_id, end_date, start_date)
+            )
+            overlap = cur.fetchall()
+
+            if overlap:
+                flash("⚠️ Mess cut already exists for this user in the selected date range!", "warning")
+                return redirect(url_for('add_mess_cut_admin'))
+
+            # Insert if no overlap
             cur.execute(
                 "INSERT INTO mess_cut (user_id, start_date, end_date) VALUES (%s, %s, %s)",
                 (user_id, start_date, end_date)
@@ -2074,7 +2084,6 @@ def mess_skip():
     """
     if request.method == 'POST':
         skip_date = request.form.get('skip_date')
-        # ✅ include 'snacks' in the allowed meals
         meals = [meal for meal in ['breakfast', 'lunch', 'dinner', 'snacks']
                  if meal in request.form]
 
@@ -2082,14 +2091,32 @@ def mess_skip():
         cur = conn.cursor()
 
         try:
+            # Insert skip meals
             for meal in meals:
                 cur.execute("""
                     INSERT INTO mess_skips (user_id, skip_date, meal_type)
                     VALUES (%s, %s, %s)
                     ON DUPLICATE KEY UPDATE user_id = user_id
                 """, (current_user.id, skip_date, meal))
+
+            # 🔥 Check total number of meals skipped for this day
+            cur.execute("""
+                SELECT COUNT(*) FROM mess_skips
+                WHERE user_id=%s AND skip_date=%s
+            """, (current_user.id, skip_date))
+            meal_count = cur.fetchone()[0]
+
+            # 🔥 If 4 meals skipped, auto add 1-day mess cut
+            if meal_count == 4:
+                cur.execute("""
+                    INSERT INTO mess_cut (user_id, start_date, end_date)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE user_id = user_id
+                """, (current_user.id, skip_date, skip_date))
+
             conn.commit()
             flash("✅ Mess skip updated successfully!", "success")
+
         except Exception as e:
             conn.rollback()
             flash(f"Error: {str(e)}", "danger")
@@ -2098,6 +2125,32 @@ def mess_skip():
             conn.close()
 
         return redirect(url_for('mess_skip'))
+
+    # ---------- Fetch all skips for this user ----------
+    conn = mysql_pool.get_connection()
+    cur = conn.cursor(dictionary=True)
+    skips = []
+    try:
+        cur.execute("""
+            SELECT skip_date, meal_type
+            FROM mess_skips
+            WHERE user_id = %s
+            ORDER BY skip_date DESC
+        """, (current_user.id,))
+        skips = cur.fetchall()
+    except Exception as e:
+        flash(f"Error loading your skips: {e}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    # Format DD-MM-YYYY
+    for r in skips:
+        if r['skip_date']:
+            r['skip_date'] = r['skip_date'].strftime("%d-%m-%Y")
+
+    return render_template('user_mess_skip.html', skips=skips)
+
 
     # ---------- Fetch all skips for this user ----------
     conn = mysql_pool.get_connection()

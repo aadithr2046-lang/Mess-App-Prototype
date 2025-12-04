@@ -23,6 +23,18 @@
         <form method="POST" id="finesForm" class="card shadow p-3" style="border-radius: var(--radius); border: none;">
             <input type="hidden" name="meal_type" value="{{ meal_type }}">
 
+            <!-- 🔥 Common Fine Field -->
+            <div class="mb-3 p-3 rounded" style="background:#F8FAFC; border:1px solid #E2E8F0;">
+                <label class="fw-bold" style="color: var(--primary); font-size: 1.05rem;">
+                    💰 Common Fine (applies to ALL users)
+                </label>
+                <input type="number" id="common_fine" step="1" min="0"
+                       class="form-control shadow-sm mt-2"
+                       placeholder="Enter fine amount for everyone"
+                       style="border-radius: 8px;">
+                <small class="text-muted">Typing here will auto-fill all fine inputs below.</small>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-borderless table-sm align-middle mb-0" style="font-family: 'Roboto', sans-serif;">
                     <thead class="bg-light" style="background-color: var(--sidebar-hover) !important;">
@@ -76,59 +88,37 @@
 {% endif %}
 
 <style>
-    /* Ensure fine inputs are easy to tap */
-    .fine-input {
-        min-width: 65px;
-        max-width: 100px;
-    }
-    
-    /* Make table rows more tappable and readable on mobile */
-    .table-hover tbody tr:hover {
-        background-color: var(--sidebar-hover) !important;
-    }
-    
-    /* Mobile-specific adjustments for the sticky footer/summary */
-    .sticky-bottom-footer {
-        position: -webkit-sticky; /* For Safari */
-        position: sticky;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 10;
-        /* Adding a subtle card effect to the footer on mobile */
-        box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
-        border-radius: 0 0 var(--radius) var(--radius);
-        margin-left: -1rem; /* Adjust to cover full card width */
-        margin-right: -1rem;
-        width: calc(100% + 2rem);
-    }
-    
-    /* Hide Email column on small screens to save space */
+    .fine-input { min-width: 65px; max-width: 100px; }
     @media (max-width: 767.98px) {
-        .d-md-table-cell {
-            display: none !important;
-        }
-        .table-sm th, .table-sm td {
-            padding: 0.5rem 0.5rem;
-        }
-        /* Full width button on mobile */
-        .sticky-bottom-footer button {
-            width: 100% !important;
-        }
+        .d-md-table-cell { display: none !important; }
+        .table-sm th, .table-sm td { padding: 0.5rem 0.5rem; }
+        .sticky-bottom-footer button { width: 100% !important; }
+    }
+    .sticky-bottom-footer {
+        position: sticky; bottom: 0; left: 0; right: 0; 
+        z-index: 10; box-shadow: 0 -4px 10px rgba(0,0,0,.05);
+        margin-left: -1rem; margin-right: -1rem; width: calc(100% + 2rem);
     }
 </style>
 
 <script>
-document.addEventListener('input', function (e) {
-    if (e.target.classList.contains('fine-input')) {
-        let total = 0;
-        document.querySelectorAll('.fine-input').forEach(inp => {
-            // Use Math.round for better floating point arithmetic control
-            const val = Math.round(parseFloat(inp.value) * 100) / 100 || 0;
-            total += val;
-        });
-        document.getElementById('totalFine').textContent = total.toFixed(2);
-    }
+/* Auto Apply Common Fine */
+document.getElementById("common_fine").addEventListener("input", function() {
+    const val = this.value;
+    document.querySelectorAll(".fine-input").forEach(inp => {
+        if (val !== "") inp.value = val;
+        inp.dispatchEvent(new Event("input"));
+    });
+});
+
+/* Total Calculation */
+document.addEventListener('input', function () {
+    let total = 0;
+    document.querySelectorAll('.fine-input').forEach(inp => {
+        const val = parseFloat(inp.value) || 0;
+        total += val;
+    });
+    document.getElementById('totalFine').textContent = total.toFixed(2);
 });
 </script>
 

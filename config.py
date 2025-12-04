@@ -10,7 +10,7 @@ class Config:
     MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 3306))  # default MySQL port
 
     # Flask secret key (set this in Render as well)
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecretkey')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'Super-Secret_key')
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True

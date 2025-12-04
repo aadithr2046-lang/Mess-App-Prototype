@@ -1,162 +1,98 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Mess Cut (Admin)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 
-{% block content %}
-<div class="container py-4">
-    <div class="card shadow-sm border rounded-3">
-        
-        <!-- Header -->
-        <div class="card-header text-center bg-light">
-            <h4 class="mb-0">➕ Add Mess Cut</h4>
-            <small class="text-muted">Assign mess cuts easily with search & date selection</small>
-        </div>
+    <style>
+        .card { border-radius: 15px; }
+        .btn-custom { font-size: 18px; padding: 10px; border-radius: 30px; }
+        @media (max-width: 576px) {
+            h3 { font-size: 20px; text-align: center; }
+            label { font-size: 14px; }
+            select, input { font-size: 15px !important; }
+        }
+    </style>
+</head>
+<body class="bg-light">
 
-        <!-- Body -->
-        <div class="card-body bg-white">
-            <form method="POST" id="messCutForm">
+<div class="container py-3">
+    <h3 class="mb-3 fw-semibold text-center">➕ Add Mess Cut</h3>
 
-                <!-- Search Box -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">🔍 Search User</label>
-                    <input type="text" id="userSearch" 
-                           class="form-control stylish-input" 
-                           placeholder="Type a name or course...">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card shadow p-4 bg-white">
+        <form method="POST">
+
+            <!-- Search Student -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">🔍 Search Student</label>
+                <input type="text" id="searchBox" class="form-control" placeholder="Type name or course...">
+            </div>
+
+            <!-- Select Student -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">👤 Select Student</label>
+                <select name="user_id" id="studentSelect" class="form-select" required>
+                    <option value="">-- Choose student --</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.name }} ({{ user.course }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Dates -->
+            <div class="row">
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label fw-bold">📅 Start Date</label>
+                    <input type="date" id="start" name="start_date" class="form-control" required oninput="enableSubmit()">
                 </div>
-
-                <!-- User List -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">👤 Select User</label>
-                    <div id="userList" class="stylish-list">
-                        {% if users %}
-                            {% for user in users %}
-                            <div class="form-check user-item">
-                                <input class="form-check-input" type="radio" 
-                                       name="user_id" value="{{ user.id }}" id="user{{ user.id }}" required>
-                                <label class="form-check-label" for="user{{ user.id }}">
-                                    {{ user.name or "Unknown" }}{% if user.course %} — {{ user.course }}{% endif %}
-                                </label>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted">⚠️ No users found in database</p>
-                        {% endif %}
-                    </div>
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label fw-bold">📅 End Date</label>
+                    <input type="date" id="end" name="end_date" class="form-control" required oninput="enableSubmit()">
                 </div>
+            </div>
 
-                <!-- Dates -->
-                <div class="row g-3">
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-bold">📅 Start Date</label>
-                        <input type="date" class="form-control stylish-date" 
-                               name="start_date" id="startDate" required onkeydown="return false;">
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-bold">📅 End Date</label>
-                        <input type="date" class="form-control stylish-date" 
-                               name="end_date" id="endDate" required onkeydown="return false;">
-                    </div>
-                </div>
+            <!-- Submit -->
+            <button id="submitBtn" type="submit" class="btn btn-primary w-100 btn-custom" disabled>
+                ✔ Add Mess Cut
+            </button>
 
-                <!-- Submit -->
-                <div class="d-grid mt-4">
-                    <button type="submit" class="btn btn-success py-2 rounded-pill shadow-sm fs-5">
-                        ✅ Add Mess Cut
-                    </button>
-                </div>
-            </form>
-        </div>
+        </form>
     </div>
 </div>
 
-<!-- Custom Styling -->
-<style>
-.stylish-input {
-    border: 2px solid #007bff;
-    border-radius: 12px;
-    padding: 10px 14px;
-    font-size: 16px;
-}
-.stylish-list {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    max-height: 220px;
-    overflow-y: auto;
-    background: #fff;
-}
-.user-item {
-    padding: 6px 10px;
-    border-bottom: 1px solid #f1f1f1;
-}
-.user-item:last-child { border-bottom: none; }
-.user-item:hover { background: #f8f9fa; border-radius: 6px; }
-.stylish-date {
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 16px;
-}
-.stylish-date:focus {
-    border-color: #28a745;
-    outline: none;
-}
-@media (max-width: 576px) {
-    .stylish-input, .stylish-date { font-size: 14px; padding: 8px; }
-}
-</style>
-
-<!-- Scripts -->
 <script>
-// ✅ Prevent selecting past dates
-const today = new Date().toISOString().split("T")[0];
-document.getElementById("startDate").setAttribute("min", today);
-document.getElementById("endDate").setAttribute("min", today);
+// Enable button only when both dates selected
+function enableSubmit() {
+    let s = document.getElementById("start").value;
+    let e = document.getElementById("end").value;
+    document.getElementById("submitBtn").disabled = !(s && e);
+}
 
-// ✅ Keep end date >= start date
-document.getElementById("startDate").addEventListener("change", function() {
-    const start = new Date(this.value);
-    if (isNaN(start)) return;
-    // end date must be same or after start
-    document.getElementById("endDate").setAttribute(
-        "min",
-        this.value
-    );
-});
+// Search filter for dropdown
+document.getElementById("searchBox").addEventListener("keyup", function() {
+    let filter = this.value.toLowerCase();
+    let options = document.getElementById("studentSelect").options;
 
-// ✅ Validate + Confirm before submit
-document.getElementById("messCutForm").addEventListener("submit", function(e) {
-    const startInput = document.getElementById("startDate").value;
-    const endInput = document.getElementById("endDate").value;
-    const start = new Date(startInput);
-    const end = new Date(endInput);
-
-    if (end < start) {
-        e.preventDefault();
-        alert("❌ End date cannot be before start date!");
-        return;
+    for (let i = 0; i < options.length; i++) {
+        let txt = options[i].text.toLowerCase();
+        options[i].style.display = txt.includes(filter) ? "" : "none";
     }
-
-    const selectedUser = document.querySelector("input[name='user_id']:checked");
-    if (!selectedUser) {
-        e.preventDefault();
-        alert("❌ Please select a user.");
-        return;
-    }
-
-    const userLabel = document.querySelector("label[for='" + selectedUser.id + "']").innerText;
-    const confirmMsg = `✅ Please confirm:\n\n👤 User: ${userLabel}\n📅 Start: ${startInput}\n📅 End: ${endInput}\n\nDo you want to submit?`;
-    if (!confirm(confirmMsg)) {
-        e.preventDefault();
-    }
-});
-
-// 🔍 Live search for users
-document.getElementById("userSearch").addEventListener("keyup", function() {
-    const searchValue = this.value.toLowerCase();
-    const items = document.querySelectorAll("#userList .user-item");
-    items.forEach(item => {
-        const text = item.innerText.toLowerCase();
-        item.style.display = text.includes(searchValue) ? "" : "none";
-    });
 });
 </script>
-{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
