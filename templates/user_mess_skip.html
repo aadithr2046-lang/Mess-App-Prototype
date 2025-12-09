@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- FLASH MESSAGE (shows on same page) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} text-center fw-bold rounded-3 mt-3">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
 <div class="container my-4" style="max-width: 700px;">
 
     <div class="card shadow-lg border-0 rounded-4 mb-5 theme-card">
@@ -64,114 +75,76 @@
                             <i class="fas fa-utensils me-1" style="color: var(--primary);"></i> {{ s.meal_type|capitalize }}
                         </small>
                     </div>
-                    <span class="badge rounded-pill fw-medium bg-primary text-white">
-                        SKIP APPLIED
-                    </span>
+                    <span class="badge rounded-pill fw-medium bg-primary text-white">SKIP APPLIED</span>
                 </li>
             {% endfor %}
         </ul>
     {% else %}
         <div class="alert text-center rounded-3" style="background-color: var(--sidebar-hover); color: var(--text-color);">
-            <i class="fas fa-mug-hot me-1" style="color: var(--primary);"></i> You haven’t applied for any mess skips yet. Ready to save?
+            <i class="fas a-mug-hot me-1" style="color: var(--primary);"></i> You haven’t applied for any mess skips yet. Ready to save?
         </div>
     {% endif %}
 
 </div>
 
 <style>
-/* Card and Header */
-.theme-card {
-    border: 1px solid var(--border-light) !important;
-}
-.theme-card-header {
-    background-color: var(--sidebar-hover) !important; /* Soft Gray Header */
-    padding: 1.25rem 1.5rem;
-}
-
-/* Form Inputs */
-.theme-input {
-    border-color: var(--border-light);
-    transition: border-color 0.3s, box-shadow 0.3s;
-}
-.theme-input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.25); /* Navy focus ring */
-}
-
-/* Custom Switch for Checkboxes */
-.form-check-lg {
-    min-height: 1.5rem;
-}
-.theme-switch {
-    width: 2.5em; /* Wider switch */
-    height: 1.5em;
-    cursor: pointer;
-    background-color: var(--border-light); /* Off state color: Light gray */
-    border-color: var(--border-light);
-}
-.theme-switch:checked {
-    background-color: var(--primary); /* On state: Navy Blue */
-    border-color: var(--primary);
-}
-.theme-switch:focus {
-    box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.25); /* Navy focus ring */
-}
-
-/* Submit Button */
-.theme-submit-btn {
-    background-color: var(--primary);
-    border-color: var(--primary);
-    color: white;
-    font-weight: 600;
-    transition: background-color 0.3s, transform 0.3s;
-}
-.theme-submit-btn:hover {
-    background-color: #34495E; /* Slightly darker Navy */
-    border-color: #34495E;
-    transform: translateY(-2px);
-}
-
-/* List Items */
-.theme-list-item {
-    background-color: var(--card-bg);
-    border-left: 5px solid var(--primary); /* Navy Accent line */
-    margin-bottom: 8px;
-    border-radius: var(--radius) !important;
-}
-/* Ensure default list item border is subtle */
-.list-group-item {
-    border-color: var(--border-light);
-}
+.theme-card { border: 1px solid var(--border-light) !important; }
+.theme-card-header { background-color: var(--sidebar-hover) !important; padding: 1.25rem 1.5rem; }
+.theme-input { border-color: var(--border-light); transition: 0.3s; }
+.theme-input:focus { border-color: var(--primary); box-shadow: 0 0 0 0.25rem rgba(44,62,80,0.25); }
+.form-check-lg { min-height: 1.5rem; }
+.theme-switch { width: 2.5em; height: 1.5em; cursor: pointer; background-color: var(--border-light); }
+.theme-switch:checked { background-color: var(--primary); border-color: var(--primary); }
+.theme-switch:focus { box-shadow: 0 0 0 0.25rem rgba(44,62,80,0.25); }
+.theme-submit-btn { background-color: var(--primary); border-color: var(--primary); color: white; font-weight: 600; transition: 0.3s; }
+.theme-submit-btn:hover { background-color: #34495E; border-color: #34495E; transform: translateY(-2px); }
+.theme-list-item { background-color: var(--card-bg); border-left: 5px solid var(--primary); margin-bottom: 8px; border-radius: var(--radius) !important; }
+.list-group-item { border-color: var(--border-light); }
 </style>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const dateInput = document.getElementById("skip_date");
     const now = new Date();
-    
-    // Calculate 10 PM today (22 hours)
     const deadlineToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 0, 0);
-
     let minDate;
-    
-    // If current time is before 10 PM (22:00) today, the minimum skip date is tomorrow.
+
     if (now < deadlineToday) {
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        minDate = tomorrow;
-    } 
-    // If current time is after 10 PM (22:00) today, the minimum skip date is the day after tomorrow.
-    else {
-        const dayAfterTomorrow = new Date(now);
-        dayAfterTomorrow.setDate(now.getDate() + 2);
-        minDate = dayAfterTomorrow;
+        minDate = new Date(now.setDate(now.getDate() + 1));
+    } else {
+        minDate = new Date(now.setDate(now.getDate() + 2));
     }
 
-    // Set min attribute for the date picker
     dateInput.setAttribute("min", minDate.toISOString().split("T")[0]);
-    
-    // Prevent manual keyboard entry (already in original code)
     dateInput.addEventListener("keydown", e => e.preventDefault());
 });
 </script>
+
+<!-- 🔥 Disable Skips If Mess Cut Exists -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const dateInput = document.getElementById("skip_date");
+    const mealSwitches = document.querySelectorAll(".theme-switch");
+    const submitBtn = document.querySelector(".theme-submit-btn");
+
+    dateInput.addEventListener("change", function() {
+        const selectedDate = this.value;
+        if (!selectedDate) return;
+
+        fetch(`/check_mess_cut?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.exists) {
+                mealSwitches.forEach(m => m.disabled = true);
+                submitBtn.disabled = true;
+                alert("⚠ Full day mess cut already applied for this date. Skips not allowed.");
+            } else {
+                mealSwitches.forEach(m => m.disabled = false);
+                submitBtn.disabled = false;
+            }
+        });
+    });
+});
+</script>
+
 {% endblock %}

@@ -19,23 +19,21 @@ import os
 from mysql.connector import pooling, Error
 from mysql.connector import pooling
 
-dbconfig = {
-    "host": "localhost",       # or 127.0.0.1
-    "user": "root",            # default local MySQL username
-    "password": "mysql123",            # enter your MySQL password if set
-    "database": "mess_app2",   # name of your local DB
-    "port": 3306               # default MySQL port
-}
+
 
 
 mysql_pool = pooling.MySQLConnectionPool(
-    pool_size=10,
-    host=dbconfig["host"],
-    user=dbconfig["user"],
-    password=dbconfig["password"],
-    database=dbconfig["database"],
-    port=dbconfig["port"]
+    pool_name="mypool",
+    pool_size=5,
+    pool_reset_session=True,
+    host="mysql-28c28287-aadithr894-996e.j.aivencloud.com",  # ✅ RDS endpoint
+    database="defaultdb",
+    port = 24885 , #  ✅ your database name
+    user="avnadmin",          # ✅ your RDS username
+    password="AVNS_CBoLgI1IB-jcasnZR9N"   # ✅ your RDS password
 )
+
+
 # --- Setup MySQL connection pool ---
 
 
@@ -2080,7 +2078,7 @@ from flask_login import login_required, current_user
 def mess_skip():
     """
     Allow a user to mark mess skips (breakfast / lunch / dinner / snacks)
-    and view all their previous skips.
+    except when a mess cut already exists for that date.
     """
     if request.method == 'POST':
         skip_date = request.form.get('skip_date')
@@ -2088,10 +2086,22 @@ def mess_skip():
                  if meal in request.form]
 
         conn = mysql_pool.get_connection()
-        cur = conn.cursor()
+        cur = conn.cursor(dictionary=True)
 
         try:
-            # Insert skip meals
+            # 🔍 Check if mess cut already exists for this date
+            cur.execute("""
+                SELECT 1 FROM mess_cut
+                WHERE user_id=%s AND start_date=%s AND end_date=%s
+            """, (current_user.id, skip_date, skip_date))
+            mess_cut_exists = cur.fetchone()
+
+            # ❌ If mess cut already exists, do NOT allow any skip
+            if mess_cut_exists:
+                flash("⚠ You already have a full-day mess cut for this date. You cannot skip meals again.", "warning")
+                return redirect(url_for('mess_skip'))
+
+            # ➤ Insert skip meals (only if no mess cut)
             for meal in meals:
                 cur.execute("""
                     INSERT INTO mess_skips (user_id, skip_date, meal_type)
@@ -2099,19 +2109,18 @@ def mess_skip():
                     ON DUPLICATE KEY UPDATE user_id = user_id
                 """, (current_user.id, skip_date, meal))
 
-            # 🔥 Check total number of meals skipped for this day
+            # 🔥 Count skipped meals
             cur.execute("""
-                SELECT COUNT(*) FROM mess_skips
+                SELECT COUNT(*) AS cnt FROM mess_skips
                 WHERE user_id=%s AND skip_date=%s
             """, (current_user.id, skip_date))
-            meal_count = cur.fetchone()[0]
+            meal_count = cur.fetchone()['cnt']
 
-            # 🔥 If 4 meals skipped, auto add 1-day mess cut
+            # 🔥 If 4 meals skipped → add mess cut
             if meal_count == 4:
                 cur.execute("""
                     INSERT INTO mess_cut (user_id, start_date, end_date)
                     VALUES (%s, %s, %s)
-                    ON DUPLICATE KEY UPDATE user_id = user_id
                 """, (current_user.id, skip_date, skip_date))
 
             conn.commit()
@@ -2151,39 +2160,28 @@ def mess_skip():
 
     return render_template('user_mess_skip.html', skips=skips)
 
-
-    # ---------- Fetch all skips for this user ----------
+@app.route('/check_mess_cut')
+@login_required
+def check_mess_cut():
+    date = request.args.get('date')
     conn = mysql_pool.get_connection()
-    cur = conn.cursor(dictionary=True)
-    skips = []
-    try:
-        cur.execute("""
-            SELECT skip_date, meal_type
-            FROM mess_skips
-            WHERE user_id = %s
-            ORDER BY skip_date DESC
-        """, (current_user.id,))
-        skips = cur.fetchall()
-    except Exception as e:
-        flash(f"Error loading your skips: {e}", "danger")
-    finally:
-        cur.close()
-        conn.close()
-
-    # Format each skip_date as DD-MM-YYYY
-    for r in skips:
-        if r['skip_date']:
-            r['skip_date'] = r['skip_date'].strftime("%d-%m-%Y")
-
-    return render_template('user_mess_skip.html', skips=skips)
-
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT 1 FROM mess_cut
+        WHERE user_id=%s AND start_date=%s AND end_date=%s
+    """, (current_user.id, date, date))
+    exists = cur.fetchone() is not None
+    cur.close()
+    conn.close()
+    return {"exists": exists}
 
 
 @app.route('/admin/mess_skips')
 @login_required
 def admin_mess_skips():
     """
-    Show tomorrow's mess skips for all meals, including snacks.
+    Show tomorrow's mess skips for all meals (breakfast, lunch, dinner, snacks),
+    excluding users who are also under mess_cut tomorrow.
     """
     if not getattr(current_user, 'is_admin', False):
         flash("Unauthorized access!", "danger")
@@ -2191,46 +2189,42 @@ def admin_mess_skips():
 
     tomorrow = date.today() + timedelta(days=1)
 
-    # ✅ include snacks
     skips = {'breakfast': [], 'lunch': [], 'dinner': [], 'snacks': []}
     skip_counts = {'breakfast': 0, 'lunch': 0, 'dinner': 0, 'snacks': 0}
 
     conn = mysql_pool.get_connection()
     cur = conn.cursor(dictionary=True)
     try:
-        # Debug log
-        print(f"Fetching mess skips for date: {tomorrow}")
+        print(f"Fetching mess skips for {tomorrow}, excluding mess_cut users")
 
         cur.execute("""
             SELECT s.meal_type, u.name
             FROM mess_skips s
             JOIN users u ON s.user_id = u.id
             WHERE s.skip_date = %s
-        """, (tomorrow,))
+              AND NOT EXISTS (
+                    SELECT 1 FROM mess_cut c
+                    WHERE c.user_id = s.user_id
+                      AND %s BETWEEN c.start_date AND c.end_date
+              )
+        """, (tomorrow, tomorrow))
         rows = cur.fetchall()
-
-        if not rows:
-            print("No skips found for tomorrow!")
 
         for row in rows:
             meal = row['meal_type']
             name = row['name']
-            # add to correct list, including snacks
             if meal in skips:
                 skips[meal].append(name)
                 skip_counts[meal] += 1
             else:
-                print(f"Unexpected meal_type in DB: {meal}")
+                print(f"Unexpected meal: {meal}")
 
     except Exception as e:
         flash(f"Error fetching mess skips: {e}", "danger")
-        print(f"DB Error: {e}")
+        print("DB error:", e)
     finally:
         cur.close()
         conn.close()
-
-    print(f"Skip counts: {skip_counts}")
-    print(f"Skips data: {skips}")
 
     return render_template(
         "admin_mess_skips.html",
