@@ -4,7 +4,8 @@
 <style>
     /* Search bar */
     #searchInput {
-        max-width: 350px;
+        max-width: 100%;
+        width: 350px;
         margin: 0 auto 15px;
         border-radius: 10px;
     }
@@ -53,16 +54,41 @@
     /* Fine input */
     .fine-input {
         border-radius: 8px;
+        width: 100px;
     }
 
     /* Small screens */
-    @media (max-width:768px){
-        table td { font-size: 0.9rem; }
-        .fine-input { width: 90px !important; }
+    @media (max-width: 768px) {
+        table td {
+            font-size: 0.85rem;
+            padding: 8px;
+        }
+        .fine-input {
+            width: 70px !important;
+        }
+        .addFineBtn {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+        }
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .fine-input {
+            width: 100%;
+        }
+        .addFineBtn {
+            width: 100%;
+        }
     }
 </style>
 
-<h3 class="fw-bold mb-3">User Fines Summary</h3>
+<h3 class="fw-bold mb-3 text-center">User Fines Summary</h3>
 
 <!-- Search -->
 <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by name or course">
@@ -78,7 +104,7 @@
                 <th>Name</th>
                 <th>Course</th>
                 <th>Total Fines</th>
-                <th style="width:180px;">Add Fine</th>
+                <th style="min-width:160px;">Add Fine</th>
             </tr>
         </thead>
 
@@ -88,15 +114,13 @@
                 <td class="user-name fw-semibold">{{ u.name }}</td>
                 <td class="user-course">{{ u.course }}</td>
                 <td class="total-fines fw-bold text-primary">₹{{ u.total_fines }}</td>
-
                 <td>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                         <input type="number"
                                class="form-control fine-input"
                                placeholder="Amount"
                                min="1"
                                step="0.01">
-
                         <button class="btn btn-primary btn-sm rounded-pill addFineBtn">
                             Add
                         </button>
@@ -108,25 +132,20 @@
     </table>
 </div>
 
-
 <script>
 // ---------------- LIVE SEARCH ----------------
 document.getElementById("searchInput").addEventListener("keyup", () => {
     let q = searchInput.value.toLowerCase();
-
     document.querySelectorAll("#finesTable tbody tr").forEach(row => {
         let name = row.querySelector(".user-name").innerText.toLowerCase();
         let course = row.querySelector(".user-course").innerText.toLowerCase();
-
         row.style.display = (name.includes(q) || course.includes(q)) ? "" : "none";
     });
 });
 
-
 // ---------------- AJAX ADD FINE ----------------
 document.querySelectorAll(".addFineBtn").forEach(btn => {
     btn.addEventListener("click", async function () {
-
         let row = this.closest("tr");
         let userId = row.dataset.userId;
         let input = row.querySelector(".fine-input");
@@ -140,10 +159,7 @@ document.querySelectorAll(".addFineBtn").forEach(btn => {
         let res = await fetch("{{ url_for('admin_user_fines') }}", {
             method: "POST",
             headers: { "Content-Type":"application/json" },
-            body: JSON.stringify({
-                user_id: userId,
-                fine_amount: fineAmount
-            })
+            body: JSON.stringify({ user_id: userId, fine_amount: fineAmount })
         });
 
         let data = await res.json();
@@ -151,17 +167,13 @@ document.querySelectorAll(".addFineBtn").forEach(btn => {
         if (data.success){
             // Update UI total
             row.querySelector(".total-fines").innerHTML = "₹" + data.new_total;
-
-            // Clear input
             input.value = "";
 
             // Show success popup
             let msg = document.getElementById("successMessage");
             msg.innerText = data.message;
             msg.style.display = "block";
-
             setTimeout(() => msg.style.display = "none", 2000);
-
         } else {
             alert("Error: " + data.message);
         }
