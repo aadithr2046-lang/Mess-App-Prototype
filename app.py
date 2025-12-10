@@ -1467,6 +1467,70 @@ def add_mess_cut_admin():
 
     return render_template('admin_add_mess_cut.html', users=users)
 
+# ---------------- ADMIN: USER FINES PAGE ----------------
+@app.route('/admin/user_fines', methods=['GET', 'POST'])
+@login_required
+def admin_user_fines():
+    if not current_user.is_admin:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    conn = mysql_pool.get_connection()
+    cur = conn.cursor(dictionary=True, buffered=True)
+
+    # ---------- AJAX Fine Add ----------
+    if request.method == "POST":
+        user_id = request.json.get("user_id")
+        fine_amount = request.json.get("fine_amount")
+
+        try:
+            fine_value = float(fine_amount)
+            if fine_value <= 0:
+                return jsonify({"success": False, "message": "Invalid fine amount"})
+
+            cur.execute("""
+                INSERT INTO fines (user_id, fine_date, meal_type, fine_amount)
+                VALUES (%s, CURDATE(), 'manual', %s)
+            """, (user_id, fine_value))
+            conn.commit()
+
+            # return updated total fines
+            cur.execute("""
+                SELECT COALESCE(SUM(fine_amount), 0) AS total_fines
+                FROM fines
+                WHERE user_id=%s
+            """, (user_id,))
+            new_total = cur.fetchone()['total_fines']
+
+            return jsonify({
+                "success": True,
+                "message": "Fine added!",
+                "new_total": new_total
+            })
+
+        except Exception as e:
+            conn.rollback()
+            return jsonify({"success": False, "message": str(e)})
+
+    # ---------- LOAD USERS FOR PAGE ----------
+    cur.execute("""
+        SELECT 
+            u.id, u.name, u.course,
+            COALESCE(SUM(f.fine_amount), 0) AS total_fines
+        FROM users u
+        LEFT JOIN fines f ON u.id = f.user_id
+        GROUP BY u.id
+        ORDER BY u.name
+    """)
+    users = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template("admin_user_fines.html", users=users)
+
+
+
+
 
 from datetime import date, datetime, timedelta
 import calendar
@@ -1722,7 +1786,7 @@ def non_scanned_users(meal_type):
         flash("Unauthorized", "danger")
         return redirect(url_for('admin_dashboard'))
 
-    if meal_type not in ['breakfast','lunch','dinner']:
+    if meal_type not in ['breakfast','lunch','Snacks','dinner']:
         flash("Invalid meal type", "danger")
         return redirect(url_for('admin_dashboard'))
 

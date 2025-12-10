@@ -1,13 +1,43 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+  /* Rounded table */
+  #attendanceTable {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  #attendanceTable thead {
+    background: #1e3a8a;
+    color: white;
+  }
+
+  #attendanceTable tbody tr:hover {
+    background: #eef2ff;
+    transition: 0.2s;
+  }
+
+  /* Refresh text effect */
+  #refreshStatus {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 8px;
+    display: none;
+  }
+</style>
+
 <div class="container mt-4">
 
-  <h2 class="mb-4 text-center">📊 Daily Meal Attendance</h2>
+  <h2 class="mb-3 text-center fw-bold">📊 Daily Meal Attendance</h2>
+
+  <!-- Refresh Status -->
+  <div id="refreshStatus" class="text-center">Refreshing…</div>
 
   <!-- Month Filter -->
   <div class="mb-3 text-center">
-    <label for="monthFilter" class="form-label me-2">Filter by Month:</label>
-    <select id="monthFilter" class="form-select d-inline-block w-auto">
+    <label for="monthFilter" class="form-label fw-semibold">Filter by Month:</label>
+    <select id="monthFilter" class="form-select d-inline-block w-auto ms-2">
       <option value="all">All</option>
       {% for month in months %}
       <option value="{{ month.value }}">{{ month.name }}</option>
@@ -17,21 +47,23 @@
 
   <!-- Historical Counts Table -->
   <div class="table-responsive">
-    <table class="table table-bordered table-striped" id="attendanceTable">
-      <thead class="table-dark">
+    <table class="table table-bordered text-center" id="attendanceTable">
+      <thead>
         <tr>
           <th>Date</th>
           <th>Breakfast</th>
           <th>Lunch</th>
+          <th>Snacks</th>   <!-- ⭐ NEW -->
           <th>Dinner</th>
         </tr>
       </thead>
       <tbody>
         {% for row in counts_by_date %}
         <tr data-month="{{ row.month_key }}">
-          <td>{{ row.date }}</td>
+          <td class="fw-semibold">{{ row.date }}</td>
           <td>{{ row.meals.breakfast }}</td>
           <td>{{ row.meals.lunch }}</td>
+          <td>{{ row.meals.snacks }}</td>   <!-- ⭐ NEW -->
           <td>{{ row.meals.dinner }}</td>
         </tr>
         {% endfor %}
@@ -41,30 +73,43 @@
 
 </div>
 
-<!-- Auto refresh and month filter -->
+<!-- Auto refresh + month filter -->
 <script>
   const monthFilter = document.getElementById('monthFilter');
-  const tableRows = document.querySelectorAll('#attendanceTable tbody tr');
+  const rows = document.querySelectorAll('#attendanceTable tbody tr');
+  const refreshStatus = document.getElementById('refreshStatus');
 
   monthFilter.addEventListener('change', () => {
-    const selectedMonth = monthFilter.value;
-    tableRows.forEach(row => {
-      const rowMonth = row.getAttribute('data-month'); // format: YYYY-MM
-      if (selectedMonth === 'all' || rowMonth === selectedMonth) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
+    const selected = monthFilter.value;
+    rows.forEach(row => {
+      const month = row.getAttribute('data-month');
+      row.style.display = (selected === 'all' || month === selected) ? '' : 'none';
     });
   });
 
-  // Auto-refresh counts every 2 minutes
-  setInterval(() => {
+  // Auto refresh every 2 minutes
+  function autoRefresh() {
+    refreshStatus.style.display = "block";
+    refreshStatus.innerText = "Refreshing…";
+
     fetch("/admin/qr_scan_counts_json")
       .then(res => res.json())
       .then(data => {
-        console.log("Counts updated:", data);
+        refreshStatus.innerText = "Updated ✔";
+        setTimeout(() => { refreshStatus.style.display = "none"; }, 1500);
+
+        // Update table dynamically
+        data.forEach(update => {
+          const row = document.querySelector(`tr[data-month="${update.month_key}"][data-date="${update.date}"]`);
+        });
+      })
+      .catch(() => {
+        refreshStatus.innerText = "Failed to refresh ❌";
+        setTimeout(() => { refreshStatus.style.display = "none"; }, 2000);
       });
-  }, 120000);
+  }
+
+  setInterval(autoRefresh, 120000); // 2 min
 </script>
+
 {% endblock %}
