@@ -29,17 +29,21 @@ from mysql.connector import pooling
 
 
 
+mysql_pool = None
+
 def get_pool():
-    return pooling.MySQLConnectionPool(
-        pool_name="mypool",
-        pool_size=2,
-        host=os.environ.get("MYSQL_HOST"),
-        database=os.environ.get("MYSQL_DB"),
-        port=int(os.environ.get("MYSQL_PORT", 3306)),
-        user=os.environ.get("MYSQL_USER"),
-        password=os.environ.get("MYSQL_PASSWORD")
-    )
-mysql_pool = get_pool()
+    global mysql_pool
+    if mysql_pool is None:
+        mysql_pool = pooling.MySQLConnectionPool(
+            pool_name="mypool",
+            pool_size=2,
+            host=os.environ.get("MYSQL_HOST"),
+            database=os.environ.get("MYSQL_DB"),
+            port=int(os.environ.get("MYSQL_PORT", 3306)),
+            user=os.environ.get("MYSQL_USER"),
+            password=os.environ.get("MYSQL_PASSWORD"),
+        )
+    return mysql_pool
 # --- Setup MySQL connection pool ---
 
 
