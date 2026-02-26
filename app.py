@@ -10,7 +10,12 @@ from mysql.connector import pooling
 from calendar import month_name
 
 # ---------------- Flask App ----------------
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder="../templates",
+    static_folder="../static"
+)
+
 app.config.from_object(Config)
 
 # ---------------- MySQL Connection Pool ----------------
@@ -22,17 +27,16 @@ from mysql.connector import pooling
 
 
 
+
 mysql_pool = pooling.MySQLConnectionPool(
     pool_name="mypool",
     pool_size=5,
-    pool_reset_session=True,
-    host="mysql-28c28287-aadithr894-996e.j.aivencloud.com",  # ✅ RDS endpoint
-    database="defaultdb",
-    port = 24885 , #  ✅ your database name
-    user="avnadmin",          # ✅ your RDS username
-    password="AVNS_CBoLgI1IB-jcasnZR9N"   # ✅ your RDS password
+    host=os.environ.get("MYSQL_HOST"),
+    database=os.environ.get("MYSQL_DB"),
+    port=int(os.environ.get("MYSQL_PORT")),
+    user=os.environ.get("MYSQL_USER"),
+    password=os.environ.get("MYSQL_PASSWORD")
 )
-
 
 # --- Setup MySQL connection pool ---
 
@@ -2534,5 +2538,5 @@ def reset_password(token):
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
-
+handler = app
 
