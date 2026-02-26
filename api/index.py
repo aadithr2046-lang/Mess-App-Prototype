@@ -919,7 +919,7 @@ def admin_qr_scan():
 from flask import jsonify, request
 from flask_login import login_required, current_user
 from datetime import date
-import MySQLdb.cursors
+
 
 # In-memory live count cache
 live_counts = {'breakfast': 0, 'lunch': 0, 'dinner': 0,'snacks':0}
@@ -1372,7 +1372,7 @@ def users_meal_counts():
     counts = {}
 
     conn = mysql_pool.get_connection()
-    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    cursor = conn.cursor(dictionary=True)
 
     try:
         for meal in ['breakfast', 'lunch', 'dinner']:
@@ -2002,7 +2002,7 @@ def users_mess_count():
 
     try:
         conn = mysql_pool.get_connection()        # ✅ Get connection from pool
-        cur = conn.cursor(MySQLdb.cursors.DictCursor)
+        cursor = conn.cursor(dictionary=True)
 
         cur.execute("SELECT name, email, user_type, mess_count FROM users")
         users = cur.fetchall()
@@ -2304,7 +2304,7 @@ def admin_mess_skips():
 
 
 from flask import jsonify, request, render_template
-import MySQLdb.cursors
+
 
 # ---------------- ADMIN: APPROVE LATE MESS ----------------
 @app.route('/admin/approve_late/<int:lm_id>', methods=['POST'])
@@ -2351,7 +2351,7 @@ def approve_bulk():
 
     try:
         conn = mysql_pool.get_connection()
-        cur = conn.cursor(MySQLdb.cursors.DictCursor)
+        cursor = conn.cursor(dictionary=True)
 
         for email in emails:
             cur.execute("SELECT * FROM new_users WHERE email=%s", (email,))
