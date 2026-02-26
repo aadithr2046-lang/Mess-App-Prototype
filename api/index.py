@@ -39,7 +39,7 @@ def get_pool():
         user=os.environ.get("MYSQL_USER"),
         password=os.environ.get("MYSQL_PASSWORD")
     )
-
+mysql_pool = get_pool()
 # --- Setup MySQL connection pool ---
 
 
