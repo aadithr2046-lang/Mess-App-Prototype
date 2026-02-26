@@ -8,6 +8,7 @@ from datetime import datetime, time
 from config import Config
 from mysql.connector import pooling
 from calendar import month_name
+import pymysql
 
 # ---------------- Flask App ----------------
 app = Flask(
@@ -1066,7 +1067,7 @@ def live_count(meal_type):
 # -------- ADMIN: VIEW CONFIRMED QR COUNTS --------
 from flask import render_template, jsonify, request, flash
 from datetime import date
-import MySQLdb
+
 
 # ---------------- TEMP LIVE COUNTERS ----------------
 live_counts = {"breakfast": 0, "lunch": 0, "dinner": 0}
@@ -1158,7 +1159,7 @@ def reset_count():
 
         return jsonify({'success': True, 'message': f'{meal.capitalize()} reset done'})
 
-    except MySQLdb.Error as e:
+    except pymysql.Error as e:
         conn.rollback()
         return jsonify({'success': False, 'message': str(e)})
 
@@ -1169,7 +1170,7 @@ def reset_count():
 
 from flask import jsonify, render_template
 from datetime import date
-import MySQLdb
+
 
 # ---------------- ADMIN: LIVE COUNT FOR TODAY ----------------
 
@@ -1201,7 +1202,7 @@ def admin_qr_count():
                 counts_by_date[date_str] = {}
             counts_by_date[date_str][meal_type] = count
 
-    except MySQLdb.Error as e:
+    except pymysql.Error as e:
         flash(f"Error fetching counts: {e}", "danger")
     finally:
         cur.close()
@@ -1216,7 +1217,7 @@ def admin_qr_count():
 
 from flask import jsonify, request
 from datetime import date
-import MySQLdb
+
 
 @app.route('/admin/add_count', methods=['POST'])
 @login_required
@@ -1271,7 +1272,7 @@ def add_count():
         conn.close()
 
 from flask import flash, redirect, url_for, render_template, request
-import MySQLdb
+
 
 @app.route('/admin/add_meal_count', methods=['GET', 'POST'])
 @login_required
@@ -1359,7 +1360,7 @@ def add_meal_count():
 
 from flask import jsonify, flash, redirect, url_for, render_template, request
 from datetime import date
-import MySQLdb
+
 
 # ---------------- ADMIN: Get today's meal counts per user ----------------
 @app.route('/admin/users_meal_counts')
@@ -1387,7 +1388,7 @@ def users_meal_counts():
 
         return jsonify({'success': True, 'data': counts})
 
-    except MySQLdb.Error as e:
+    except pymysql.Error as e:
         return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
 
     finally:
@@ -2020,7 +2021,7 @@ def users_mess_count():
             ]
         })
 
-    except MySQLdb.Error as e:
+    except pymysql.Error as e:
         if cur:
             cur.close()
         if conn:
@@ -2053,7 +2054,7 @@ def admin_validate_qr():
 
         return jsonify({"success": True, "message": f"Attendance recorded for user ID {user_id}"})
 
-    except MySQLdb.Error as e:
+    except pymysql.Error as e:
         if cur:
             cur.close()
         if conn:
@@ -2126,7 +2127,7 @@ def reset_late_mess():
         flash("✅ All late mess requests have been removed.", "success")
         return redirect(url_for('late_mess_list'))
 
-    except MySQLdb.Error as e:
+    except pymysql.Error as e:
         if cur:
             cur.close()
         if conn:
