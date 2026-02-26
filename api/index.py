@@ -34,7 +34,7 @@ def get_pool():
         pool_size=2,
         host=os.environ.get("MYSQL_HOST"),
         database=os.environ.get("MYSQL_DB"),
-        port=int(os.environ.get("MYSQL_PORT")),
+        port=int(os.environ.get("MYSQL_PORT", 3306)),
         user=os.environ.get("MYSQL_USER"),
         password=os.environ.get("MYSQL_PASSWORD")
     )
