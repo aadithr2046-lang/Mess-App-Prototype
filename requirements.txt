@@ -10,4 +10,5 @@ gunicorn==22.0.0
 pytz==2025.1
 Pillow==10.4.0
 resend==0.8.0
+PyMySQL==1.1.1
 
