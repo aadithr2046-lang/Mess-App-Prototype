@@ -46,7 +46,13 @@ def get_pool():
     return mysql_pool
 # --- Setup MySQL connection pool ---
 
+mysql_pool = None
 
+def get_mysql_pool():
+    global mysql_pool
+    if mysql_pool is None:
+        mysql_pool = get_pool()
+    return mysql_pool
 # --- Helper function to get connection ---
 def get_db_connection():
     try:
@@ -150,10 +156,10 @@ def create_admin():
 # -----------------------------
 # Call this once at startup
 # -----------------------------
-with app.app_context():
+
+
+if __name__ == "__main__":
     create_admin()
-
-
 
 
 
