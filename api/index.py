@@ -158,8 +158,8 @@ def create_admin():
 # -----------------------------
 
 
-if __name__ == "__main__":
-    create_admin()
+
+create_admin()
 
 
 
@@ -2547,7 +2547,6 @@ def reset_password(token):
 
 # ----------------- START APP -----------------
 # ----------------- START APP -----------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
 handler = app
