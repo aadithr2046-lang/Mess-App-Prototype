@@ -686,7 +686,8 @@ from flask_login import login_required, current_user
 @app.route('/admin/mess_cuts', methods=['GET'])
 @login_required
 def mess_cut_list():
-    if not current_user.is_admin:
+    if not (getattr(current_user, 'is_admin', False) or getattr(current_user, 'is_scanner', False)):
+        flash("Unauthorized", "danger")
         flash("Unauthorized", "danger")
         return redirect(url_for('user_dashboard'))
 
