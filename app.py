@@ -987,13 +987,7 @@ def scanner_dashboard():
     return render_template('scanner_dashboard.html', total_mess_cuts=total_mess_cuts)
 
 # ─── UPDATE 2: Allow Scanners to access the detailed Mess Cut List ───
-@app.route('/admin/mess_cuts', methods=['GET'])
-@login_required
-def mess_cut_list():
-    # Grant access to both admins and scanners
-    if not (getattr(current_user, 'is_admin', False) or getattr(current_user, 'is_scanner', False)):
-        flash("Unauthorized", "danger")
-        return redirect(url_for('user_dashboard'))
+
     
     # ... (Keep the rest of your existing mess_cut_list logic exactly as it is) ...
 
