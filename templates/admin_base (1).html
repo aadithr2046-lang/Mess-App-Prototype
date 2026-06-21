@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 20px auto;">
+
+    <!-- Navigation to QR Scanner -->
+    <a href="{{ url_for('admin_qr_scan') }}" class="btn btn-primary" style="text-align: center; padding: 10px 20px;">
+        Go to QR Scanner
+    </a>
+
+    <!-- View QR Scan Counts -->
+    <a href="{{ url_for('qr_scan_counts') }}" class="btn btn-info" style="text-align: center; padding: 10px 20px;">
+        View QR Scan Counts
+    </a>
+
+    <!-- Add Mess Cut -->
+    <a href="{{ url_for('add_mess_cut_admin') }}" class="btn btn-warning" style="text-align: center; padding: 10px 20px;" onclick="return checkMessCutPassword(event)">
+        ➕ Add Mess Cut
+    </a>
+
+    <!-- Reset Late Mess Button -->
+    <form action="{{ url_for('reset_late_mess') }}" method="POST" onsubmit="return confirm('Are you sure you want to reset all late mess entries?');">
+        <button type="submit" class="btn btn-danger" style="width: 100%; padding: 10px 20px;">
+            Reset Late Mess List
+        </button>
+    </form>
+
+</div>
+
+<script>
+    function checkMessCutPassword(event) {
+        event.preventDefault();
+        const targetUrl = event.currentTarget.href;
+        const entered = prompt("Enter password to add a mess cut:");
+
+        if (entered === null) {
+            // User clicked Cancel
+            return false;
+        }
+
+        if (entered === "admin@mess") {
+            window.location.href = targetUrl;
+        } else {
+            alert("Incorrect password. Access denied.");
+        }
+        return false;
+    }
+</script>
+{% endblock %}
